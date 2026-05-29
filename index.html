@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BOOLE — Hair Salon, Yamato</title>
+  <meta name="description" content="大和駅から徒歩3分。地下の小さなヘアサロン、BOOLE。" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@200;300;400&family=Noto+Sans+JP:wght@200;300;400&display=swap"
+    rel="stylesheet"
+  />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root {
+      --cream: #f5f1ea;
+      --paper: #fbf9f4;
+      --ink: #1a1816;
+      --ink-soft: #3a3633;
+      --bronze: #9a7e57;
+      --greige: #bfb4a3;
+      --line: rgba(26, 24, 22, 0.55);
+      --line-soft: rgba(26, 24, 22, 0.22);
+    }
+
+    html, body {
+      background: var(--cream);
+      color: var(--ink);
+      font-family: 'Noto Sans JP', 'Inter', system-ui, sans-serif;
+      font-weight: 300;
+      letter-spacing: 0.02em;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    .font-display { font-family: 'Cormorant Garamond', 'Times New Roman', serif; }
+    .font-en      { font-family: 'Inter', system-ui, sans-serif; letter-spacing: 0.18em; }
+    .font-jp      { font-family: 'Noto Sans JP', sans-serif; }
+
+    /* ============ Grain noise overlay ============ */
+    .grain {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 60;
+      opacity: 0.05;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+
+    /* ============ Floating particles (ambient) ============ */
+    .dust {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+    .dust span {
+      position: absolute;
+      display: block;
+      width: 2px;
+      height: 2px;
+      background: var(--ink);
+      border-radius: 50%;
+      opacity: 0;
+      animation: drift linear infinite;
+    }
+    @keyframes drift {
+      0%   { transform: translate3d(0, 100vh, 0); opacity: 0; }
+      10%  { opacity: 0.18; }
+      90%  { opacity: 0.10; }
+      100% { transform: translate3d(20px, -10vh, 0); opacity: 0; }
+    }
+
+    /* ============ Header ============ */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 40;
+      padding: 28px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+    header > * { pointer-events: auto; }
+
+    .brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 400;
+      letter-spacing: 0.42em;
+      color: var(--ink);
+    }
+    .brand-sub {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-size: 9px;
+      letter-spacing: 0.42em;
+      color: var(--ink-soft);
+      margin-top: 4px;
+      opacity: 0.7;
+    }
+
+    .reserve-link {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.32em;
+      color: var(--ink);
+      text-transform: uppercase;
+      text-decoration: none;
+      position: relative;
+      padding: 8px 0;
+      transition: letter-spacing 600ms ease-out, color 400ms ease-out;
+    }
+    .reserve-link::after {
+      content: "→";
+      display: inline-block;
+      margin-left: 10px;
+      transition: transform 500ms ease-out, margin-left 500ms ease-out;
+    }
+    .reserve-link:hover { letter-spacing: 0.42em; color: var(--bronze); }
+    .reserve-link:hover::after { margin-left: 18px; }
+
+    /* ============ Footer caption ============ */
+    .caption {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.42em;
+      color: var(--ink-soft);
+      opacity: 0.55;
+      z-index: 40;
+      text-transform: uppercase;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    /* ============ Scene container ============ */
+    main {
+      min-height: 100vh;
+      width: 100vw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+    }
+    .scene-wrap {
+      position: relative;
+      width: min(92vw, 1100px);
+      aspect-ratio: 4 / 3;
+    }
+    .scene-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+      box-shadow:
+        0 30px 70px -28px rgba(26, 24, 22, 0.45),
+        0 8px 24px -12px rgba(26, 24, 22, 0.25);
+      opacity: 0;
+      animation: rise 1.6s 0.2s ease-out forwards;
+    }
+    .scene-credit {
+      position: absolute;
+      bottom: -34px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Inter', sans-serif;
+      font-size: 9px;
+      letter-spacing: 0.5em;
+      color: var(--ink-soft);
+      white-space: nowrap;
+      opacity: 0;
+      animation: rise 1.4s 0.9s ease-out forwards;
+    }
+
+    /* Tagline above scene */
+    .tagline {
+      position: absolute;
+      top: -68px;
+      left: 0;
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      font-style: italic;
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      color: var(--ink-soft);
+      opacity: 0;
+      transform: translateY(8px);
+      animation: rise 1.4s 0.4s ease-out forwards;
+    }
+    .tagline-en {
+      position: absolute;
+      top: -28px;
+      left: 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.42em;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: rise 1.4s 0.65s ease-out forwards;
+    }
+    @keyframes rise {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============ Hotspots ============ */
+    .hotspot {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      margin-left: -7px;
+      margin-top: -7px;
+      cursor: pointer;
+      z-index: 5;
+      transition: transform 500ms ease-out;
+    }
+    .hotspot::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 45%, rgba(255, 240, 210, 0.98), rgba(196, 158, 104, 0.85));
+      opacity: 0.9;
+      box-shadow:
+        0 0 10px 2px rgba(245, 210, 150, 0.55),
+        0 0 2px 1px rgba(120, 90, 50, 0.45);
+      transition: opacity 400ms ease-out, transform 500ms ease-out, box-shadow 400ms ease-out;
+    }
+    .hotspot::after {
+      content: "";
+      position: absolute;
+      inset: -14px;
+      border-radius: 50%;
+      border: 1px solid rgba(245, 225, 185, 0.55);
+      opacity: 0;
+      transform: scale(0.6);
+      transition: opacity 500ms ease-out, transform 600ms ease-out, border-color 400ms ease-out;
+    }
+    .hotspot:hover::before,
+    .hotspot.is-near::before {
+      opacity: 1;
+      transform: scale(1.25);
+      box-shadow:
+        0 0 16px 4px rgba(245, 215, 160, 0.78),
+        0 0 3px 1px rgba(120, 90, 50, 0.5);
+    }
+    .hotspot:hover::after,
+    .hotspot.is-near::after {
+      opacity: 1;
+      transform: scale(1);
+      border-color: rgba(245, 225, 185, 0.85);
+    }
+
+    .hotspot-label {
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      transform: translate(-50%, 4px);
+      opacity: 0;
+      pointer-events: none;
+      text-align: center;
+      transition: opacity 500ms ease-out, transform 600ms ease-out;
+      white-space: nowrap;
+    }
+    .hotspot-label .num {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-size: 9px;
+      letter-spacing: 0.42em;
+      color: rgba(245, 238, 225, 0.88);
+      opacity: 0.85;
+      margin-bottom: 4px;
+      text-shadow: 0 0 4px rgba(0, 0, 0, 0.8), 0 1px 6px rgba(0, 0, 0, 0.7);
+    }
+    .hotspot-label .en {
+      display: block;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 26px;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      color: #f7f2e9;
+      line-height: 1;
+      text-shadow:
+        0 0 4px rgba(0, 0, 0, 0.85),
+        0 0 9px rgba(0, 0, 0, 0.6),
+        0 1px 14px rgba(0, 0, 0, 0.55);
+    }
+    .hotspot-label .jp {
+      display: block;
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      color: rgba(245, 238, 225, 0.92);
+      margin-top: 8px;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 400ms ease-out 80ms, transform 500ms ease-out 80ms;
+      text-shadow: 0 0 4px rgba(0, 0, 0, 0.8), 0 1px 8px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Labels that fall over the bright wall/floor: dark ink with a soft light halo */
+    .hotspot.on-light .hotspot-label .num {
+      color: var(--ink-soft);
+      text-shadow: 0 0 5px rgba(245, 241, 234, 0.95), 0 1px 4px rgba(245, 241, 234, 0.9);
+    }
+    .hotspot.on-light .hotspot-label .en {
+      color: var(--ink);
+      text-shadow:
+        0 0 5px rgba(245, 241, 234, 0.97),
+        0 0 11px rgba(245, 241, 234, 0.85),
+        0 1px 3px rgba(245, 241, 234, 0.9);
+    }
+    .hotspot.on-light .hotspot-label .jp {
+      color: var(--ink-soft);
+      text-shadow: 0 0 5px rgba(245, 241, 234, 0.95), 0 1px 4px rgba(245, 241, 234, 0.9);
+    }
+    .hotspot.is-near .hotspot-label,
+    .hotspot:hover .hotspot-label {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+    .hotspot:hover .hotspot-label .jp {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .hotspot:hover { transform: translate3d(0, -3px, 0); }
+
+    /* Some hotspots flip their label upward to avoid the bottom edge */
+    .hotspot.label-up .hotspot-label { top: auto; bottom: 22px; }
+
+    /* ============ Chapter overlay & panel ============ */
+    .chapter-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(26, 24, 22, 0.32);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 500ms ease-out;
+      z-index: 70;
+    }
+    .chapter-backdrop.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .chapter-panel {
+      position: fixed;
+      top: 0; right: 0;
+      height: 100vh;
+      width: min(640px, 60vw);
+      background: var(--paper);
+      transform: translateX(100%);
+      transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 80;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -40px 0 80px rgba(26, 24, 22, 0.08);
+    }
+    .chapter-panel.is-open { transform: translateX(0); }
+
+    .chapter-inner {
+      flex: 1;
+      overflow-y: auto;
+      padding: 90px 72px 90px 72px;
+    }
+
+    .chapter-close {
+      position: absolute;
+      top: 28px;
+      right: 32px;
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      border: 1px solid var(--line-soft);
+      border-radius: 50%;
+      cursor: pointer;
+      color: var(--ink);
+      transition: background 400ms ease-out, border-color 400ms ease-out, transform 500ms ease-out;
+      z-index: 2;
+    }
+    .chapter-close:hover {
+      background: var(--ink);
+      color: var(--cream);
+      border-color: var(--ink);
+      transform: rotate(90deg);
+    }
+
+    .chapter-num {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.5em;
+      color: var(--ink-soft);
+      opacity: 0.7;
+    }
+    .chapter-en {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(54px, 6vw, 84px);
+      font-weight: 300;
+      line-height: 0.95;
+      letter-spacing: 0.02em;
+      margin-top: 14px;
+      color: var(--ink);
+    }
+    .chapter-jp {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.28em;
+      color: var(--ink-soft);
+      margin-top: 20px;
+    }
+    .chapter-divider {
+      width: 36px;
+      height: 1px;
+      background: var(--bronze);
+      margin: 40px 0;
+    }
+    .chapter-body {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 14px;
+      line-height: 2.1;
+      color: var(--ink-soft);
+      font-weight: 300;
+    }
+    .chapter-body p + p { margin-top: 1.4em; }
+
+    /* Stagger fade-in for chapter content */
+    .chapter-panel .fade-item {
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 700ms ease-out, transform 800ms ease-out;
+    }
+    .chapter-panel.is-open .fade-item {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .chapter-panel.is-open .fade-item:nth-child(1) { transition-delay: 220ms; }
+    .chapter-panel.is-open .fade-item:nth-child(2) { transition-delay: 320ms; }
+    .chapter-panel.is-open .fade-item:nth-child(3) { transition-delay: 420ms; }
+    .chapter-panel.is-open .fade-item:nth-child(4) { transition-delay: 520ms; }
+    .chapter-panel.is-open .fade-item:nth-child(5) { transition-delay: 620ms; }
+
+    /* People list inside chapter */
+    .people-list { display: flex; flex-direction: column; gap: 28px; }
+    .person {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      gap: 24px;
+      align-items: start;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .person:last-child { border-bottom: none; }
+    .person-avatar {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      border: 1px solid var(--line-soft);
+      display: grid; place-items: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      color: var(--ink-soft);
+    }
+    .person-role {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.32em;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+    }
+    .person-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 400;
+      color: var(--ink);
+      margin-top: 6px;
+    }
+    .person-name-jp {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      color: var(--ink-soft);
+      margin-left: 12px;
+    }
+    .person-desc {
+      font-size: 13px;
+      line-height: 1.9;
+      margin-top: 8px;
+      color: var(--ink-soft);
+    }
+
+    .voices { display: flex; flex-direction: column; gap: 18px; }
+    .voice-card {
+      padding: 22px 24px;
+      border: 1px solid var(--line-soft);
+      background: rgba(255,255,255,0.4);
+    }
+    .voice-quote {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 19px;
+      line-height: 1.5;
+      color: var(--ink);
+    }
+    .voice-meta {
+      margin-top: 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.28em;
+      color: var(--ink-soft);
+      opacity: 0.7;
+    }
+
+    .info-grid { display: grid; gap: 18px; }
+    .info-row {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-key {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      padding-top: 3px;
+    }
+    .info-val { font-size: 13px; line-height: 1.8; color: var(--ink); }
+
+    .reserve-cta-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 36px;
+      padding: 14px 24px;
+      border: 1px solid var(--ink);
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.32em;
+      color: var(--ink);
+      text-transform: uppercase;
+      text-decoration: none;
+      transition: background 400ms ease-out, color 400ms ease-out;
+    }
+    .reserve-cta-inline:hover {
+      background: var(--ink);
+      color: var(--cream);
+    }
+    .reserve-cta-inline span { transition: margin-left 500ms ease-out; }
+    .reserve-cta-inline:hover span { margin-left: 8px; }
+
+    /* ============ Mobile ============ */
+    @media (max-width: 768px) {
+      header { padding: 18px 22px; }
+      .brand { font-size: 18px; letter-spacing: 0.36em; }
+      .brand-sub { display: none; }
+      .reserve-link { font-size: 10px; letter-spacing: 0.28em; }
+
+      .scene-wrap {
+        width: 96vw;
+        aspect-ratio: 4 / 3;
+      }
+      .tagline { font-size: 17px; top: -52px; }
+      .tagline-en { top: -22px; font-size: 9px; }
+      .scene-credit { font-size: 7px; letter-spacing: 0.3em; bottom: -26px; }
+
+      .chapter-panel { width: 100vw; }
+      .chapter-inner { padding: 80px 28px 60px; }
+      .chapter-en { font-size: 48px; }
+
+      .hotspot { width: 18px; height: 18px; margin-left: -9px; margin-top: -9px; }
+      .hotspot-label .en { font-size: 20px; }
+      .hotspot-label .jp { font-size: 10px; }
+
+      .caption { font-size: 9px; letter-spacing: 0.32em; bottom: 18px; }
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+    }
+
+    /* Initial reveal on load */
+    .reveal {
+      opacity: 0;
+      transform: translateY(6px);
+      animation: rise 1.6s 0.2s ease-out forwards;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ====== Header ====== -->
+  <header>
+    <div class="reveal">
+      <div class="brand">BOOLE</div>
+      <span class="brand-sub">HAIR SALON · YAMATO</span>
+    </div>
+    <a class="reserve-link reveal" href="https://beauty.hotpepper.jp/slnH000429621/" target="_blank" rel="noopener">Reserve</a>
+  </header>
+
+  <!-- ====== Ambient: dust particles ====== -->
+  <div class="dust" id="dust" aria-hidden="true"></div>
+
+  <!-- ====== Main scene ====== -->
+  <main>
+    <div class="scene-wrap" id="scene">
+      <div class="tagline-en">A QUIET ROOM IN YAMATO</div>
+      <div class="tagline">飾らない美しさを、静かに整える。</div>
+
+      <!-- ====== Diorama hero — handcrafted miniature of the BOOLE room ====== -->
+      <img class="scene-img" src="boole_diorama.jpg"
+           alt="BOOLE サロンを手作りで再現したミニチュア3Dジオラマ" />
+      <span class="scene-credit">— A QUIET ROOM IN YAMATO —</span>
+
+      <!-- ====== Hotspots ====== -->
+      <!-- Coordinates are percentages within scene-wrap (matched to SVG above) -->
+      <button class="hotspot" data-chapter="welcome" style="top: 30%; left: 81%;" aria-label="Welcome">
+        <span class="hotspot-label">
+          <span class="num">I</span>
+          <span class="en">Welcome</span>
+          <span class="jp">大和の小さなサロン</span>
+        </span>
+      </button>
+
+      <button class="hotspot on-light" data-chapter="voice" style="top: 21%; left: 36%;" aria-label="Voice">
+        <span class="hotspot-label">
+          <span class="num">II</span>
+          <span class="en">Voice</span>
+          <span class="jp">戻ってくる理由</span>
+        </span>
+      </button>
+
+      <button class="hotspot on-light" data-chapter="skills" style="top: 57%; left: 66%;" aria-label="Skills">
+        <span class="hotspot-label">
+          <span class="num">III</span>
+          <span class="en">Skills</span>
+          <span class="jp">経験で整える</span>
+        </span>
+      </button>
+
+      <button class="hotspot on-light" data-chapter="people" style="top: 57%; left: 27%;" aria-label="People">
+        <span class="hotspot-label">
+          <span class="num">IV</span>
+          <span class="en">People</span>
+          <span class="jp">静かな信頼をつくる3人</span>
+        </span>
+      </button>
+
+      <button class="hotspot on-light" data-chapter="way-in" style="top: 89%; left: 38%;" aria-label="Way In">
+        <span class="hotspot-label">
+          <span class="num">V</span>
+          <span class="en">Way In</span>
+          <span class="jp">大和駅から、地下へ</span>
+        </span>
+      </button>
+    </div>
+  </main>
+
+  <!-- ====== Footer caption ====== -->
+  <div class="caption">HAIR SALON BOOLE &nbsp;·&nbsp; YAMATO, KANAGAWA</div>
+
+  <!-- ====== Chapter overlay & panel ====== -->
+  <div class="chapter-backdrop" id="backdrop"></div>
+  <aside class="chapter-panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="chapter-title">
+    <button class="chapter-close" id="close" aria-label="閉じる">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><line x1="2" y1="2" x2="12" y2="12"/><line x1="12" y1="2" x2="2" y2="12"/></svg>
+    </button>
+    <div class="chapter-inner" id="chapter-inner">
+      <!-- Populated by JS -->
+    </div>
+  </aside>
+
+  <!-- ====== Grain overlay ====== -->
+  <div class="grain" aria-hidden="true"></div>
+
+  <script>
+    /* ============ Chapter content ============ */
+    const RESERVE_URL = 'https://beauty.hotpepper.jp/slnH000429621/';
+    const INSTAGRAM_URL = 'https://www.instagram.com/boole___/';
+
+    const chapters = {
+      'welcome': {
+        num: 'I',
+        en: 'Welcome',
+        jp: '大和の小さなサロン',
+        body: `
+          <p>スタイリスト2名とアシスタント1名。<br>8席の、小さなサロンです。</p>
+        `,
+        extra: '',
+        cta: { href: INSTAGRAM_URL, label: 'Instagram' }
+      },
+      'voice': {
+        num: 'II',
+        en: 'Voice',
+        jp: 'また戻ってくる理由',
+        body: '',
+        extra: `
+          <div class="voices fade-item">
+            <div class="voice-card">
+              <div class="voice-quote">“まとまりやすくて、家で整えやすい。”</div>
+              <div class="voice-meta">— A guest</div>
+            </div>
+            <div class="voice-card">
+              <div class="voice-quote">“相談しやすく、説明が丁寧。”</div>
+              <div class="voice-meta">— A guest</div>
+            </div>
+            <div class="voice-card">
+              <div class="voice-quote">“また切ってもらいたくなる。”</div>
+              <div class="voice-meta">— A guest</div>
+            </div>
+          </div>
+        `
+      },
+      'skills': {
+        num: 'III',
+        en: 'Skills',
+        jp: '経験で整える',
+        body: `
+          <p>髪質、毛量、骨格、生え癖。<br>その人の条件を読んでから、はさみを入れます。</p>
+          <p>代表 渡邊 暁史、経歴 17 年。<br>都内、海外を経て、いま大和で。</p>
+        `,
+        extra: ''
+      },
+      'people': {
+        num: 'IV',
+        en: 'People',
+        jp: '静かな信頼をつくる3人',
+        body: '',
+        cta: { href: RESERVE_URL, label: 'Reserve' },
+        extra: `
+          <div class="people-list fade-item">
+            <div class="person">
+              <div class="person-avatar">W</div>
+              <div>
+                <div class="person-role">Director</div>
+                <div><span class="person-name">Akifumi Watanabe</span><span class="person-name-jp">渡邊 暁史</span></div>
+                <p class="person-desc">経験の厚みで髪を読む人。ショート、くせ毛、毛量調整。</p>
+              </div>
+            </div>
+            <div class="person">
+              <div class="person-avatar">W</div>
+              <div>
+                <div class="person-role">Stylist</div>
+                <div><span class="person-name">Koichi Wada</span><span class="person-name-jp">和田 康一</span></div>
+                <p class="person-desc">自然体で話しやすい人。アレンジ、ヘアセットも得意。</p>
+              </div>
+            </div>
+            <div class="person">
+              <div class="person-avatar">T</div>
+              <div>
+                <div class="person-role">Assistant</div>
+                <div><span class="person-name">Ami Tsunoda</span><span class="person-name-jp">角田 亜美</span></div>
+                <p class="person-desc">やわらかさを足す人。ティーンズからガーリーまで。</p>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      'way-in': {
+        num: 'V',
+        en: 'Way In',
+        jp: '大和駅から、地下のサロンへ',
+        body: '',
+        cta: { href: RESERVE_URL, label: 'Reserve' },
+        extra: `
+          <div class="info-grid fade-item">
+            <div class="info-row">
+              <div class="info-key">Address</div>
+              <div class="info-val">神奈川県大和市中央 1-4-17<br>第22アルカディアビル B1F</div>
+            </div>
+            <div class="info-row">
+              <div class="info-key">Access</div>
+              <div class="info-val">小田急江ノ島線・相鉄本線・東急田園都市線「大和駅」から徒歩 3 分。<br>地上ではなく、階段を降りた先。</div>
+            </div>
+            <div class="info-row">
+              <div class="info-key">Hours</div>
+              <div class="info-val">9:00 — 21:00<br>定休日 水曜、第 2・第 4 月曜</div>
+            </div>
+            <div class="info-row">
+              <div class="info-key">Tel</div>
+              <div class="info-val">046-204-9469</div>
+            </div>
+          </div>
+        `
+      }
+    };
+
+    /* ============ Open / Close chapter panel ============ */
+    const backdrop = document.getElementById('backdrop');
+    const panel = document.getElementById('panel');
+    const inner = document.getElementById('chapter-inner');
+    const closeBtn = document.getElementById('close');
+
+    function openChapter(id) {
+      const c = chapters[id];
+      if (!c) return;
+      inner.innerHTML = `
+        <div class="fade-item"><span class="chapter-num">CHAPTER ${c.num}</span></div>
+        <div class="fade-item"><h2 class="chapter-en" id="chapter-title">${c.en}</h2></div>
+        <div class="fade-item"><div class="chapter-jp">${c.jp}</div></div>
+        <div class="fade-item"><div class="chapter-divider"></div></div>
+        ${c.body ? `<div class="fade-item"><div class="chapter-body">${c.body}</div></div>` : ''}
+        ${c.extra || ''}
+        ${c.cta ? `<a class="reserve-cta-inline fade-item" href="${c.cta.href}" target="_blank" rel="noopener">
+          ${c.cta.label} <span>→</span>
+        </a>` : ''}
+      `;
+      // Force reflow for transition restart
+      void panel.offsetWidth;
+      backdrop.classList.add('is-open');
+      panel.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeChapter() {
+      backdrop.classList.remove('is-open');
+      panel.classList.remove('is-open');
+      document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('.hotspot').forEach(h => {
+      h.addEventListener('click', (e) => {
+        e.preventDefault();
+        openChapter(h.dataset.chapter);
+      });
+    });
+    backdrop.addEventListener('click', closeChapter);
+    closeBtn.addEventListener('click', closeChapter);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeChapter();
+    });
+
+    /* ============ Cursor magnetism on hotspots ============ */
+    const scene = document.getElementById('scene');
+    const spots = Array.from(document.querySelectorAll('.hotspot'));
+    const PROXIMITY = 180; // px
+    const PULL = 4;        // px max translate
+
+    function onMove(e) {
+      const mx = e.clientX;
+      const my = e.clientY;
+      spots.forEach(s => {
+        const r = s.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const dx = mx - cx;
+        const dy = my - cy;
+        const dist = Math.hypot(dx, dy);
+        if (dist < PROXIMITY) {
+          const k = (1 - dist / PROXIMITY);
+          s.classList.add('is-near');
+          s.style.transform = `translate3d(${dx * 0.04 * k}px, ${dy * 0.04 * k - (s.matches(':hover') ? 3 : 0)}px, 0)`;
+        } else {
+          s.classList.remove('is-near');
+          s.style.transform = '';
+        }
+      });
+    }
+    function onLeave() {
+      spots.forEach(s => { s.classList.remove('is-near'); s.style.transform = ''; });
+    }
+    if (!window.matchMedia('(hover: none)').matches) {
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseleave', onLeave);
+    } else {
+      // On touch devices: brief reveal pulse for hotspots after load
+      window.addEventListener('load', () => {
+        spots.forEach((s, i) => {
+          setTimeout(() => {
+            s.classList.add('is-near');
+            setTimeout(() => s.classList.remove('is-near'), 700);
+          }, 700 + i * 220);
+        });
+      });
+    }
+
+    /* ============ Dust particles ============ */
+    (function dust() {
+      const host = document.getElementById('dust');
+      const N = 22;
+      for (let i = 0; i < N; i++) {
+        const d = document.createElement('span');
+        const dur = 14 + Math.random() * 18;
+        const delay = -Math.random() * dur;
+        d.style.left = (Math.random() * 100) + 'vw';
+        d.style.animationDuration = dur + 's';
+        d.style.animationDelay = delay + 's';
+        d.style.opacity = (0.08 + Math.random() * 0.12).toFixed(2);
+        host.appendChild(d);
+      }
+    })();
+  </script>
+</body>
+</html>
