@@ -13,8 +13,6 @@
     rel="stylesheet"
   />
 
-  <script src="https://cdn.tailwindcss.com"></script>
-
   <style>
     :root {
       --cream: #f5f1ea;
@@ -27,18 +25,28 @@
       --line-soft: rgba(26, 24, 22, 0.22);
     }
 
+    /* minimal reset (replaces the removed Tailwind CDN preflight) */
+    *, *::before, *::after { box-sizing: border-box; }
+    h1, h2, h3, h4, p, figure, blockquote { margin: 0; }
+    button { margin: 0; padding: 0; font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+    a { color: inherit; }
+    img { display: block; max-width: 100%; }
+
     html, body {
       background: var(--cream);
       color: var(--ink);
       font-family: 'Noto Sans JP', 'Inter', system-ui, sans-serif;
       font-weight: 300;
+      line-height: 1.5;
       letter-spacing: 0.02em;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
+    body { margin: 0; }
     /* clip horizontal overflow on the root only — putting it on <body> too would
-       make <body> a nested scroller and break window scrollTo / scrollIntoView */
-    html { overflow-x: hidden; }
+       make <body> a nested scroller and break window scrollTo / scrollIntoView.
+       tap-highlight off so iOS doesn't flash a grey box on tap. */
+    html { overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
 
     .font-display { font-family: 'Cormorant Garamond', 'Times New Roman', serif; }
     .font-en      { font-family: 'Inter', system-ui, sans-serif; letter-spacing: 0.18em; }
@@ -86,6 +94,7 @@
       top: 0; left: 0; right: 0;
       z-index: 40;
       padding: 28px 40px;
+      padding-top: calc(28px + env(safe-area-inset-top));   /* clear the notch */
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -127,8 +136,6 @@
       margin-left: 10px;
       transition: transform 500ms ease-out, margin-left 500ms ease-out;
     }
-    .reserve-link:hover { letter-spacing: 0.42em; color: var(--bronze); }
-    .reserve-link:hover::after { margin-left: 18px; }
 
     /* ============ Footer caption ============ */
     .caption {
@@ -149,8 +156,9 @@
 
     /* ============ Scene container ============ */
     main {
-      min-height: 100vh;
-      width: 100vw;
+      min-height: 100vh;     /* fallback for old browsers */
+      min-height: 100svh;    /* iOS: stable height, no address-bar jump/cutoff */
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -287,7 +295,6 @@
       transform: scale(0.6);
       transition: opacity 500ms ease-out, transform 600ms ease-out, border-color 400ms ease-out;
     }
-    .hotspot:hover::before,
     .hotspot.is-near::before {
       opacity: 1;
       transform: scale(1.25);
@@ -295,7 +302,6 @@
         0 0 16px 4px rgba(245, 215, 160, 0.78),
         0 0 3px 1px rgba(120, 90, 50, 0.5);
     }
-    .hotspot:hover::after,
     .hotspot.is-near::after {
       opacity: 1;
       transform: scale(1);
@@ -365,16 +371,10 @@
       color: var(--ink-soft);
       text-shadow: 0 0 5px rgba(245, 241, 234, 0.95), 0 1px 4px rgba(245, 241, 234, 0.9);
     }
-    .hotspot.is-near .hotspot-label,
-    .hotspot:hover .hotspot-label {
+    .hotspot.is-near .hotspot-label {
       opacity: 1;
       transform: translate(-50%, 0);
     }
-    .hotspot:hover .hotspot-label .jp {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    .hotspot:hover { transform: translate3d(0, -3px, 0); }
 
     /* Some hotspots flip their label upward to avoid the bottom edge */
     .hotspot.label-up .hotspot-label { top: auto; bottom: 22px; }
@@ -524,12 +524,7 @@
       text-decoration: none;
       transition: background 400ms ease-out, color 400ms ease-out;
     }
-    .reserve-cta-inline:hover {
-      background: var(--ink);
-      color: var(--cream);
-    }
     .reserve-cta-inline span { transition: margin-left 500ms ease-out; }
-    .reserve-cta-inline:hover span { margin-left: 8px; }
 
     /* ============ Long-form chapter sections (below the hero) ============ */
     .chapters-flow {
@@ -560,7 +555,7 @@
     /* scroll cue at the bottom of the hero */
     .scroll-hint {
       position: absolute;
-      bottom: 18px; left: 50%; transform: translateX(-50%);
+      bottom: calc(18px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
       display: flex; flex-direction: column; align-items: center; gap: 10px;
       font-family: 'Inter', sans-serif; font-size: 9px; letter-spacing: 0.42em;
       color: var(--ink-soft); text-transform: uppercase;
@@ -583,6 +578,7 @@
       position: relative; z-index: 2;
       text-align: center;
       padding: 52px 20px 64px;
+      padding-bottom: calc(64px + env(safe-area-inset-bottom));
       border-top: 1px solid var(--line-soft);
       font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: 0.42em;
       color: var(--ink-soft); text-transform: uppercase; opacity: 0.7;
@@ -596,9 +592,26 @@
     }
     header.scrolled::before { opacity: 1; }
 
+    /* Hover affordances only on real pointer devices — stops iOS from sticking
+       a tapped dot in its lit/raised state after you tap and scroll away. */
+    @media (hover: hover) and (pointer: fine) {
+      .reserve-link:hover { letter-spacing: 0.42em; color: var(--bronze); }
+      .reserve-link:hover::after { margin-left: 18px; }
+      .hotspot:hover::before {
+        opacity: 1; transform: scale(1.25);
+        box-shadow: 0 0 16px 4px rgba(245, 215, 160, 0.78), 0 0 3px 1px rgba(120, 90, 50, 0.5);
+      }
+      .hotspot:hover::after { opacity: 1; transform: scale(1); border-color: rgba(245, 225, 185, 0.85); }
+      .hotspot:hover .hotspot-label { opacity: 1; transform: translate(-50%, 0); }
+      .hotspot:hover .hotspot-label .jp { opacity: 1; transform: translateY(0); }
+      .hotspot:hover { transform: translate3d(0, -3px, 0); }
+      .reserve-cta-inline:hover { background: var(--ink); color: var(--cream); }
+      .reserve-cta-inline:hover span { margin-left: 8px; }
+    }
+
     /* ============ Mobile ============ */
     @media (max-width: 768px) {
-      header { padding: 18px 22px; }
+      header { padding: 18px 22px; padding-top: calc(18px + env(safe-area-inset-top)); }
       .brand { font-size: 18px; letter-spacing: 0.36em; }
       .brand-sub { display: none; }
       .reserve-link { font-size: 10px; letter-spacing: 0.28em; }
@@ -826,7 +839,6 @@
     const scene = document.getElementById('scene');
     const spots = Array.from(document.querySelectorAll('.hotspot'));
     const PROXIMITY = 180; // px
-    const PULL = 4;        // px max translate
 
     function onMove(e) {
       const mx = e.clientX;
@@ -874,8 +886,6 @@
       const hint = document.getElementById('sceneHint');
       if (!img || !wrap) return;
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const stage = document.getElementById('stage');
-      const panel = document.getElementById('panel');
       const hover = window.matchMedia('(hover: hover)').matches;
 
       const srcOf = i => `hero/frame_${String(i).padStart(2, '0')}.jpg`;
@@ -904,6 +914,7 @@
       // driver state
       let pos = HOME, desired = HOME, shownIdx = -1;
       let dragging = false, dragStartX = 0, dragBase = HOME, moved = false;
+      let running = false, heroOnScreen = true;
       // cursor-follow — horizontal orbit only, driven by REAL rendered frames.
       // No CSS plane-tilt and NO idle auto-sway (a slow sway just exposes the frame
       // stepping and reads as cheap). The room moves only in response to the cursor
@@ -921,11 +932,10 @@
       }
 
       function loop() {
-        const panelOpen = panel && panel.classList.contains('is-open');
         if (!dragging) {
-          if (follow && !reduce && hover && !panelOpen) {
+          if (follow && !reduce && hover) {
             desired = HOME + fx * FOLLOW_RANGE;        // desktop: cursor orbit
-          } else if (gyroActive && !reduce && !panelOpen) {
+          } else if (gyroActive && !reduce && heroOnScreen) {
             desired = HOME + gyroFx * FOLLOW_RANGE;    // mobile: device tilt
           } else {
             desired = HOME;                            // idle: rest at the home composition
@@ -933,9 +943,16 @@
         }
         pos += (desired - pos) * 0.12;
         show(Math.round(pos));
-        requestAnimationFrame(loop);
+        // keep rAF alive only while something actually moves (saves battery / avoids iOS jank)
+        const settling = Math.abs(desired - pos) > 0.02;
+        if (dragging || (follow && hover && !reduce) || (gyroActive && heroOnScreen && !reduce) || settling) {
+          requestAnimationFrame(loop);
+        } else {
+          running = false;
+        }
       }
-      requestAnimationFrame(loop);
+      function kick() { if (!running) { running = true; requestAnimationFrame(loop); } }
+      kick();   // initial settle to the home frame
 
       function hideHint() { if (hint) hint.classList.add('is-hidden'); }
 
@@ -944,6 +961,7 @@
         dragging = true; moved = false; dragStartX = e.clientX; dragBase = pos;
         window.__heroSuppress = false;
         wrap.classList.add('is-dragging');
+        kick();
         try { wrap.setPointerCapture(e.pointerId); } catch (_) {}
       });
       wrap.addEventListener('pointermove', e => {
@@ -972,6 +990,7 @@
           if (nx >= -1.05 && nx <= 1.05 && ny >= -1.2 && ny <= 1.2) {
             follow = true;
             fx = Math.max(-1, Math.min(1, nx));
+            kick();
           } else {
             follow = false;
           }
@@ -988,6 +1007,7 @@
         if (Math.abs(d) < GYRO_DEADZONE) d = 0;
         gyroFx = Math.max(-1, Math.min(1, d / GYRO_RANGE_DEG));
         gyroActive = true;
+        kick();
       }
       function startGyro() {
         if (gyroOn || reduce) return;
@@ -1009,6 +1029,14 @@
         if (DOE && typeof DOE.requestPermission !== 'function') startGyro();   // Android: start immediately
         wrap.addEventListener('pointerup', enableGyro);                         // iOS: first tap grants permission
         window.addEventListener('orientationchange', () => { gamma0 = null; }); // re-center when rotated
+      }
+
+      // pause the whole loop when the hero scrolls out of view; resume when it returns
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver((es) => {
+          heroOnScreen = es[0].isIntersecting;
+          if (heroOnScreen) kick();
+        }, { threshold: 0 }).observe(wrap);
       }
 
       window.addEventListener('pointerdown', hideHint, { once: true });
