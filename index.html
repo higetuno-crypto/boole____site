@@ -976,6 +976,9 @@
       // or a drag, then rests at the home composition.
       const FOLLOW_RANGE = 8;                                   // frames across half-width
       let follow = false, fx = 0;
+      // mobile gyro — tilt the phone left/right to swing the room horizontally
+      let gyroOn = false, gyroActive = false, gyroFx = 0, gamma0 = null;
+      const GYRO_RANGE_DEG = 22, GYRO_DEADZONE = 1.5;
 
       function show(idx) {
         idx = Math.max(0, Math.min(N - 1, idx));
@@ -986,10 +989,13 @@
       function loop() {
         const panelOpen = panel && panel.classList.contains('is-open');
         if (!dragging) {
-          // follow the cursor (real orbit) when over the scene; otherwise rest at home
-          desired = (follow && !reduce && hover && !panelOpen)
-            ? HOME + fx * FOLLOW_RANGE
-            : HOME;
+          if (follow && !reduce && hover && !panelOpen) {
+            desired = HOME + fx * FOLLOW_RANGE;        // desktop: cursor orbit
+          } else if (gyroActive && !reduce && !panelOpen) {
+            desired = HOME + gyroFx * FOLLOW_RANGE;    // mobile: device tilt
+          } else {
+            desired = HOME;                            // idle: rest at the home composition
+          }
         }
         pos += (desired - pos) * 0.12;
         show(Math.round(pos));
@@ -1037,6 +1043,38 @@
           }
         });
         document.addEventListener('mouseleave', () => { follow = false; });
+      }
+
+      // ----- mobile: gyroscope drives the horizontal swing (tilt the phone) -----
+      function onOrient(e) {
+        const g = e.gamma;                       // left-right device tilt (deg)
+        if (g == null) return;
+        if (gamma0 === null) gamma0 = g;         // neutral baseline = first reading
+        let d = g - gamma0;
+        if (Math.abs(d) < GYRO_DEADZONE) d = 0;
+        gyroFx = Math.max(-1, Math.min(1, d / GYRO_RANGE_DEG));
+        gyroActive = true;
+      }
+      function startGyro() {
+        if (gyroOn || reduce) return;
+        window.addEventListener('deviceorientation', onOrient);
+        gyroOn = true;
+      }
+      function enableGyro() {                     // iOS 13+ requires this from a user gesture
+        const DOE = window.DeviceOrientationEvent;
+        if (!DOE || gyroOn || reduce) return;
+        if (typeof DOE.requestPermission === 'function') {
+          DOE.requestPermission().then(s => { if (s === 'granted') startGyro(); }).catch(() => {});
+        } else {
+          startGyro();
+        }
+      }
+      if (!hover) {
+        if (hint) hint.textContent = 'TILT ⟷';
+        const DOE = window.DeviceOrientationEvent;
+        if (DOE && typeof DOE.requestPermission !== 'function') startGyro();   // Android: start immediately
+        wrap.addEventListener('pointerup', enableGyro);                         // iOS: first tap grants permission
+        window.addEventListener('orientationchange', () => { gamma0 = null; }); // re-center when rotated
       }
 
       window.addEventListener('pointerdown', hideHint, { once: true });
