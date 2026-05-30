@@ -968,16 +968,14 @@
       }
 
       // driver state
-      let pos = HOME, desired = HOME, shownIdx = -1, autoPhase = 0;
-      const AMP = 8;            // frames either side of home while idle
-      const SPEED = 0.00036;    // rad/ms → ~17s per gentle cycle
-      const RESUME_MS = 2600;   // pause after a drag before sway resumes
+      let pos = HOME, desired = HOME, shownIdx = -1;
       let dragging = false, dragStartX = 0, dragBase = HOME, moved = false;
-      let lastInteract = -1e9;
       // cursor-follow — horizontal orbit only, driven by REAL rendered frames.
-      // (No CSS plane-tilt: tilting one flat image reads as "a photo being tilted".)
+      // No CSS plane-tilt and NO idle auto-sway (a slow sway just exposes the frame
+      // stepping and reads as cheap). The room moves only in response to the cursor
+      // or a drag, then rests at the home composition.
       const FOLLOW_RANGE = 8;                                   // frames across half-width
-      let follow = false, fx = 0, fy = 0, wasFollow = false;
+      let follow = false, fx = 0;
 
       function show(idx) {
         idx = Math.max(0, Math.min(N - 1, idx));
@@ -985,22 +983,13 @@
         if (imgs[idx] && imgs[idx].complete) { img.src = imgs[idx].src; shownIdx = idx; placeSpots(idx); }
       }
 
-      let t0 = performance.now();
-      function loop(now) {
-        const dt = now - t0; t0 = now;
+      function loop() {
         const panelOpen = panel && panel.classList.contains('is-open');
         if (!dragging) {
-          if (follow && !reduce && hover && !panelOpen) {
-            // room turns toward the cursor — real camera orbit (horizontal frames)
-            desired = HOME + fx * FOLLOW_RANGE;
-            wasFollow = true;
-          } else {
-            if (wasFollow) { seedPhase(); wasFollow = false; }
-            if (!reduce && (now - lastInteract) > RESUME_MS) {
-              autoPhase += SPEED * dt;
-              desired = HOME + AMP * Math.sin(autoPhase);
-            }
-          }
+          // follow the cursor (real orbit) when over the scene; otherwise rest at home
+          desired = (follow && !reduce && hover && !panelOpen)
+            ? HOME + fx * FOLLOW_RANGE
+            : HOME;
         }
         pos += (desired - pos) * 0.12;
         show(Math.round(pos));
@@ -1008,11 +997,6 @@
       }
       requestAnimationFrame(loop);
 
-      // resume sway seamlessly from wherever the drag left off
-      function seedPhase() {
-        const s = Math.max(-1, Math.min(1, (pos - HOME) / AMP));
-        autoPhase = Math.asin(s);
-      }
       function hideHint() { if (hint) hint.classList.add('is-hidden'); }
 
       wrap.addEventListener('pointerdown', e => {
@@ -1020,7 +1004,6 @@
         dragging = true; moved = false; dragStartX = e.clientX; dragBase = pos;
         window.__heroSuppress = false;
         wrap.classList.add('is-dragging');
-        lastInteract = performance.now();
         try { wrap.setPointerCapture(e.pointerId); } catch (_) {}
       });
       wrap.addEventListener('pointermove', e => {
@@ -1029,14 +1012,11 @@
         if (Math.abs(dx) > 5) { moved = true; window.__heroSuppress = true; hideHint(); }
         const w = wrap.clientWidth || 1;
         desired = Math.max(0, Math.min(N - 1, dragBase - (dx / w) * (N - 1) * 1.3));
-        lastInteract = performance.now();
       });
       function endDrag(e) {
         if (!dragging) return;
         dragging = false;
         wrap.classList.remove('is-dragging');
-        lastInteract = performance.now();
-        seedPhase();
         try { wrap.releasePointerCapture(e.pointerId); } catch (_) {}
         if (moved) setTimeout(() => { window.__heroSuppress = false; }, 350);
       }
@@ -1052,7 +1032,6 @@
           if (nx >= -1.05 && nx <= 1.05 && ny >= -1.2 && ny <= 1.2) {
             follow = true;
             fx = Math.max(-1, Math.min(1, nx));
-            fy = Math.max(-1, Math.min(1, ny));
           } else {
             follow = false;
           }
