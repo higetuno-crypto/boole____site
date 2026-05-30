@@ -617,7 +617,11 @@
       .person { grid-template-columns: 52px 1fr; gap: 18px; }
       .person-avatar { width: 52px; height: 52px; font-size: 19px; }
 
-      .hotspot { width: 18px; height: 18px; margin-left: -9px; margin-top: -9px; }
+      /* dots felt too big on phones — shrink the whole dot (core+glow+ring) to 0.7x */
+      .hotspot {
+        width: 18px; height: 18px; margin-left: -9px; margin-top: -9px;
+        transform: scale(0.7); transform-origin: center;
+      }
       .hotspot-label .en { font-size: 20px; }
       .hotspot-label .jp { font-size: 10px; }
 
