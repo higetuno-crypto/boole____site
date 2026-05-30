@@ -35,8 +35,10 @@
       letter-spacing: 0.02em;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      overflow-x: hidden;
     }
+    /* clip horizontal overflow on the root only — putting it on <body> too would
+       make <body> a nested scroller and break window scrollTo / scrollIntoView */
+    html { overflow-x: hidden; }
 
     .font-display { font-family: 'Cormorant Garamond', 'Times New Roman', serif; }
     .font-en      { font-family: 'Inter', system-ui, sans-serif; letter-spacing: 0.18em; }
@@ -378,63 +380,7 @@
     .hotspot.label-up .hotspot-label { top: auto; bottom: 22px; }
 
     /* ============ Chapter overlay & panel ============ */
-    .chapter-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(26, 24, 22, 0.32);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 500ms ease-out;
-      z-index: 70;
-    }
-    .chapter-backdrop.is-open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .chapter-panel {
-      position: fixed;
-      top: 0; right: 0;
-      height: 100vh;
-      width: min(640px, 60vw);
-      background: var(--paper);
-      transform: translateX(100%);
-      transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
-      z-index: 80;
-      display: flex;
-      flex-direction: column;
-      box-shadow: -40px 0 80px rgba(26, 24, 22, 0.08);
-    }
-    .chapter-panel.is-open { transform: translateX(0); }
-
-    .chapter-inner {
-      flex: 1;
-      overflow-y: auto;
-      padding: 90px 72px 90px 72px;
-    }
-
-    .chapter-close {
-      position: absolute;
-      top: 28px;
-      right: 32px;
-      width: 38px;
-      height: 38px;
-      display: grid;
-      place-items: center;
-      background: transparent;
-      border: 1px solid var(--line-soft);
-      border-radius: 50%;
-      cursor: pointer;
-      color: var(--ink);
-      transition: background 400ms ease-out, border-color 400ms ease-out, transform 500ms ease-out;
-      z-index: 2;
-    }
-    .chapter-close:hover {
-      background: var(--ink);
-      color: var(--cream);
-      border-color: var(--ink);
-      transform: rotate(90deg);
-    }
+    /* (slide-in panel removed — chapters now render inline below the hero) */
 
     .chapter-num {
       font-family: 'Inter', sans-serif;
@@ -473,22 +419,6 @@
       font-weight: 300;
     }
     .chapter-body p + p { margin-top: 1.4em; }
-
-    /* Stagger fade-in for chapter content */
-    .chapter-panel .fade-item {
-      opacity: 0;
-      transform: translateY(12px);
-      transition: opacity 700ms ease-out, transform 800ms ease-out;
-    }
-    .chapter-panel.is-open .fade-item {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    .chapter-panel.is-open .fade-item:nth-child(1) { transition-delay: 220ms; }
-    .chapter-panel.is-open .fade-item:nth-child(2) { transition-delay: 320ms; }
-    .chapter-panel.is-open .fade-item:nth-child(3) { transition-delay: 420ms; }
-    .chapter-panel.is-open .fade-item:nth-child(4) { transition-delay: 520ms; }
-    .chapter-panel.is-open .fade-item:nth-child(5) { transition-delay: 620ms; }
 
     /* People list inside chapter */
     .people-list { display: flex; flex-direction: column; gap: 28px; }
@@ -601,6 +531,71 @@
     .reserve-cta-inline span { transition: margin-left 500ms ease-out; }
     .reserve-cta-inline:hover span { margin-left: 8px; }
 
+    /* ============ Long-form chapter sections (below the hero) ============ */
+    .chapters-flow {
+      position: relative;
+      z-index: 2;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 20px 40px 40px;
+    }
+    .ch-section {
+      padding: 78px 0;
+      border-top: 1px solid var(--line-soft);
+      scroll-margin-top: 92px;   /* land below the fixed header */
+    }
+    .ch-section:first-child { border-top: none; }
+    .ch-section .chapter-body,
+    .ch-section .voices,
+    .ch-section .people-list,
+    .ch-section .info-grid { margin-top: 4px; }
+    /* reveal on scroll — progressive enhancement (fully visible without JS) */
+    .js .ch-reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 900ms ease-out, transform 1000ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .js .ch-reveal.in { opacity: 1; transform: none; }
+
+    /* scroll cue at the bottom of the hero */
+    .scroll-hint {
+      position: absolute;
+      bottom: 18px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      font-family: 'Inter', sans-serif; font-size: 9px; letter-spacing: 0.42em;
+      color: var(--ink-soft); text-transform: uppercase;
+      opacity: 0.6; z-index: 6; cursor: pointer; background: none; border: 0; padding: 6px;
+      transition: opacity 600ms ease-out;
+    }
+    .scroll-hint .line {
+      width: 1px; height: 40px;
+      background: linear-gradient(var(--bronze), rgba(154, 126, 87, 0));
+      animation: scrollLine 2.4s ease-in-out infinite; transform-origin: top center;
+    }
+    @keyframes scrollLine {
+      0%, 100% { transform: scaleY(0.35); opacity: 0.35; }
+      50%      { transform: scaleY(1); opacity: 1; }
+    }
+    .scroll-hint.is-hidden { opacity: 0; pointer-events: none; }
+
+    /* footer at the end of the page */
+    .site-footer {
+      position: relative; z-index: 2;
+      text-align: center;
+      padding: 52px 20px 64px;
+      border-top: 1px solid var(--line-soft);
+      font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: 0.42em;
+      color: var(--ink-soft); text-transform: uppercase; opacity: 0.7;
+    }
+
+    /* fixed header gains a soft scrim once you scroll into the content */
+    header::before {
+      content: ""; position: absolute; inset: 0; z-index: -1;
+      background: linear-gradient(var(--cream), rgba(245, 241, 234, 0));
+      opacity: 0; transition: opacity 500ms ease-out; pointer-events: none;
+    }
+    header.scrolled::before { opacity: 1; }
+
     /* ============ Mobile ============ */
     @media (max-width: 768px) {
       header { padding: 18px 22px; }
@@ -616,15 +611,17 @@
       .tagline-en { top: -22px; font-size: 9px; }
       .scene-credit { font-size: 7px; letter-spacing: 0.3em; bottom: -26px; }
 
-      .chapter-panel { width: 100vw; }
-      .chapter-inner { padding: 80px 28px 60px; }
       .chapter-en { font-size: 48px; }
+      .chapters-flow { padding: 6px 24px 24px; }
+      .ch-section { padding: 58px 0; scroll-margin-top: 72px; }
+      .person { grid-template-columns: 52px 1fr; gap: 18px; }
+      .person-avatar { width: 52px; height: 52px; font-size: 19px; }
 
       .hotspot { width: 18px; height: 18px; margin-left: -9px; margin-top: -9px; }
       .hotspot-label .en { font-size: 20px; }
       .hotspot-label .jp { font-size: 10px; }
 
-      .caption { font-size: 9px; letter-spacing: 0.32em; bottom: 18px; }
+      .site-footer { font-size: 9px; letter-spacing: 0.32em; padding: 44px 18px 52px; }
     }
 
     /* Reduced motion */
@@ -712,180 +709,113 @@
       <span class="scene-hint" id="sceneHint" aria-hidden="true">MOVE&nbsp;&nbsp;⟷</span>
       <span class="scene-credit">— A QUIET ROOM IN YAMATO —</span>
     </div>
+    <button class="scroll-hint" id="scrollHint" aria-label="下へスクロール"><span>Scroll</span><span class="line"></span></button>
   </main>
 
-  <!-- ====== Footer caption ====== -->
-  <div class="caption">HAIR SALON BOOLE &nbsp;·&nbsp; YAMATO, KANAGAWA</div>
+  <!-- ====== Long-form chapter sections (all rendered up front; hotspots scroll here) ====== -->
+  <div class="chapters-flow">
 
-  <!-- ====== Chapter overlay & panel ====== -->
-  <div class="chapter-backdrop" id="backdrop"></div>
-  <aside class="chapter-panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="chapter-title">
-    <button class="chapter-close" id="close" aria-label="閉じる">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><line x1="2" y1="2" x2="12" y2="12"/><line x1="12" y1="2" x2="2" y2="12"/></svg>
-    </button>
-    <div class="chapter-inner" id="chapter-inner">
-      <!-- Populated by JS -->
-    </div>
-  </aside>
+    <article class="ch-section ch-reveal" id="ch-welcome">
+      <span class="chapter-num">CHAPTER I</span>
+      <h2 class="chapter-en">Welcome</h2>
+      <div class="chapter-jp">大和の小さなサロン</div>
+      <div class="chapter-divider"></div>
+      <div class="chapter-body"><p>スタイリスト2名とアシスタント1名。<br>8席の、小さなサロンです。</p></div>
+      <a class="reserve-cta-inline" href="https://www.instagram.com/boole___/" target="_blank" rel="noopener">Instagram <span>→</span></a>
+    </article>
+
+    <article class="ch-section ch-reveal" id="ch-voice">
+      <span class="chapter-num">CHAPTER II</span>
+      <h2 class="chapter-en">Voice</h2>
+      <div class="chapter-jp">また戻ってくる理由</div>
+      <div class="chapter-divider"></div>
+      <div class="voices">
+        <div class="voice-card"><div class="voice-quote">“まとまりやすくて、家で整えやすい。”</div><div class="voice-meta">— A guest</div></div>
+        <div class="voice-card"><div class="voice-quote">“相談しやすく、説明が丁寧。”</div><div class="voice-meta">— A guest</div></div>
+        <div class="voice-card"><div class="voice-quote">“また切ってもらいたくなる。”</div><div class="voice-meta">— A guest</div></div>
+      </div>
+    </article>
+
+    <article class="ch-section ch-reveal" id="ch-skills">
+      <span class="chapter-num">CHAPTER III</span>
+      <h2 class="chapter-en">Skills</h2>
+      <div class="chapter-jp">経験で整える</div>
+      <div class="chapter-divider"></div>
+      <div class="chapter-body">
+        <p>髪質、毛量、骨格、生え癖。<br>その人の条件を読んでから、はさみを入れます。</p>
+        <p>代表 渡邊 暁史、経歴 17 年。<br>都内、海外を経て、いま大和で。</p>
+      </div>
+    </article>
+
+    <article class="ch-section ch-reveal" id="ch-people">
+      <span class="chapter-num">CHAPTER IV</span>
+      <h2 class="chapter-en">People</h2>
+      <div class="chapter-jp">静かな信頼をつくる3人</div>
+      <div class="chapter-divider"></div>
+      <div class="people-list">
+        <div class="person">
+          <div class="person-avatar">W</div>
+          <div>
+            <div class="person-role">Director</div>
+            <div><span class="person-name">Akifumi Watanabe</span><span class="person-name-jp">渡邊 暁史</span></div>
+            <p class="person-desc">経験の厚みで髪を読む人。ショート、くせ毛、毛量調整。</p>
+          </div>
+        </div>
+        <div class="person">
+          <div class="person-avatar">W</div>
+          <div>
+            <div class="person-role">Stylist</div>
+            <div><span class="person-name">Koichi Wada</span><span class="person-name-jp">和田 康一</span></div>
+            <p class="person-desc">自然体で話しやすい人。アレンジ、ヘアセットも得意。</p>
+          </div>
+        </div>
+        <div class="person">
+          <div class="person-avatar">T</div>
+          <div>
+            <div class="person-role">Assistant</div>
+            <div><span class="person-name">Ami Tsunoda</span><span class="person-name-jp">角田 亜美</span></div>
+            <p class="person-desc">やわらかさを足す人。ティーンズからガーリーまで。</p>
+          </div>
+        </div>
+      </div>
+      <a class="reserve-cta-inline" href="https://beauty.hotpepper.jp/slnH000429621/" target="_blank" rel="noopener">Reserve <span>→</span></a>
+    </article>
+
+    <article class="ch-section ch-reveal" id="ch-way-in">
+      <span class="chapter-num">CHAPTER V</span>
+      <h2 class="chapter-en">Way In</h2>
+      <div class="chapter-jp">大和駅から、地下のサロンへ</div>
+      <div class="chapter-divider"></div>
+      <div class="info-grid">
+        <div class="info-row"><div class="info-key">Address</div><div class="info-val">神奈川県大和市中央 1-4-17<br>第22アルカディアビル B1F</div></div>
+        <div class="info-row"><div class="info-key">Access</div><div class="info-val">小田急江ノ島線・相鉄本線・東急田園都市線「大和駅」から徒歩 3 分。<br>地上ではなく、階段を降りた先。</div></div>
+        <div class="info-row"><div class="info-key">Hours</div><div class="info-val">9:00 — 21:00<br>定休日 水曜、第 2・第 4 月曜</div></div>
+        <div class="info-row"><div class="info-key">Tel</div><div class="info-val">046-204-9469</div></div>
+      </div>
+      <a class="reserve-cta-inline" href="https://beauty.hotpepper.jp/slnH000429621/" target="_blank" rel="noopener">Reserve <span>→</span></a>
+    </article>
+
+  </div>
+
+  <!-- ====== Footer ====== -->
+  <footer class="site-footer">HAIR SALON BOOLE &nbsp;·&nbsp; YAMATO, KANAGAWA</footer>
 
   <!-- ====== Grain overlay ====== -->
   <div class="grain" aria-hidden="true"></div>
 
   <script>
-    /* ============ Chapter content ============ */
-    const RESERVE_URL = 'https://beauty.hotpepper.jp/slnH000429621/';
-    const INSTAGRAM_URL = 'https://www.instagram.com/boole___/';
+    /* Chapter content now lives in the static .chapters-flow sections below the hero
+       (rendered up front — no per-click JS build). Hotspots just scroll to them. */
 
-    const chapters = {
-      'welcome': {
-        num: 'I',
-        en: 'Welcome',
-        jp: '大和の小さなサロン',
-        body: `
-          <p>スタイリスト2名とアシスタント1名。<br>8席の、小さなサロンです。</p>
-        `,
-        extra: '',
-        cta: { href: INSTAGRAM_URL, label: 'Instagram' }
-      },
-      'voice': {
-        num: 'II',
-        en: 'Voice',
-        jp: 'また戻ってくる理由',
-        body: '',
-        extra: `
-          <div class="voices fade-item">
-            <div class="voice-card">
-              <div class="voice-quote">“まとまりやすくて、家で整えやすい。”</div>
-              <div class="voice-meta">— A guest</div>
-            </div>
-            <div class="voice-card">
-              <div class="voice-quote">“相談しやすく、説明が丁寧。”</div>
-              <div class="voice-meta">— A guest</div>
-            </div>
-            <div class="voice-card">
-              <div class="voice-quote">“また切ってもらいたくなる。”</div>
-              <div class="voice-meta">— A guest</div>
-            </div>
-          </div>
-        `
-      },
-      'skills': {
-        num: 'III',
-        en: 'Skills',
-        jp: '経験で整える',
-        body: `
-          <p>髪質、毛量、骨格、生え癖。<br>その人の条件を読んでから、はさみを入れます。</p>
-          <p>代表 渡邊 暁史、経歴 17 年。<br>都内、海外を経て、いま大和で。</p>
-        `,
-        extra: ''
-      },
-      'people': {
-        num: 'IV',
-        en: 'People',
-        jp: '静かな信頼をつくる3人',
-        body: '',
-        cta: { href: RESERVE_URL, label: 'Reserve' },
-        extra: `
-          <div class="people-list fade-item">
-            <div class="person">
-              <div class="person-avatar">W</div>
-              <div>
-                <div class="person-role">Director</div>
-                <div><span class="person-name">Akifumi Watanabe</span><span class="person-name-jp">渡邊 暁史</span></div>
-                <p class="person-desc">経験の厚みで髪を読む人。ショート、くせ毛、毛量調整。</p>
-              </div>
-            </div>
-            <div class="person">
-              <div class="person-avatar">W</div>
-              <div>
-                <div class="person-role">Stylist</div>
-                <div><span class="person-name">Koichi Wada</span><span class="person-name-jp">和田 康一</span></div>
-                <p class="person-desc">自然体で話しやすい人。アレンジ、ヘアセットも得意。</p>
-              </div>
-            </div>
-            <div class="person">
-              <div class="person-avatar">T</div>
-              <div>
-                <div class="person-role">Assistant</div>
-                <div><span class="person-name">Ami Tsunoda</span><span class="person-name-jp">角田 亜美</span></div>
-                <p class="person-desc">やわらかさを足す人。ティーンズからガーリーまで。</p>
-              </div>
-            </div>
-          </div>
-        `
-      },
-      'way-in': {
-        num: 'V',
-        en: 'Way In',
-        jp: '大和駅から、地下のサロンへ',
-        body: '',
-        cta: { href: RESERVE_URL, label: 'Reserve' },
-        extra: `
-          <div class="info-grid fade-item">
-            <div class="info-row">
-              <div class="info-key">Address</div>
-              <div class="info-val">神奈川県大和市中央 1-4-17<br>第22アルカディアビル B1F</div>
-            </div>
-            <div class="info-row">
-              <div class="info-key">Access</div>
-              <div class="info-val">小田急江ノ島線・相鉄本線・東急田園都市線「大和駅」から徒歩 3 分。<br>地上ではなく、階段を降りた先。</div>
-            </div>
-            <div class="info-row">
-              <div class="info-key">Hours</div>
-              <div class="info-val">9:00 — 21:00<br>定休日 水曜、第 2・第 4 月曜</div>
-            </div>
-            <div class="info-row">
-              <div class="info-key">Tel</div>
-              <div class="info-val">046-204-9469</div>
-            </div>
-          </div>
-        `
-      }
-    };
-
-    /* ============ Open / Close chapter panel ============ */
-    const backdrop = document.getElementById('backdrop');
-    const panel = document.getElementById('panel');
-    const inner = document.getElementById('chapter-inner');
-    const closeBtn = document.getElementById('close');
-
-    function openChapter(id) {
-      const c = chapters[id];
-      if (!c) return;
-      inner.innerHTML = `
-        <div class="fade-item"><span class="chapter-num">CHAPTER ${c.num}</span></div>
-        <div class="fade-item"><h2 class="chapter-en" id="chapter-title">${c.en}</h2></div>
-        <div class="fade-item"><div class="chapter-jp">${c.jp}</div></div>
-        <div class="fade-item"><div class="chapter-divider"></div></div>
-        ${c.body ? `<div class="fade-item"><div class="chapter-body">${c.body}</div></div>` : ''}
-        ${c.extra || ''}
-        ${c.cta ? `<a class="reserve-cta-inline fade-item" href="${c.cta.href}" target="_blank" rel="noopener">
-          ${c.cta.label} <span>→</span>
-        </a>` : ''}
-      `;
-      // Force reflow for transition restart
-      void panel.offsetWidth;
-      backdrop.classList.add('is-open');
-      panel.classList.add('is-open');
-      document.body.style.overflow = 'hidden';
-    }
-    function closeChapter() {
-      backdrop.classList.remove('is-open');
-      panel.classList.remove('is-open');
-      document.body.style.overflow = '';
-    }
-
+    /* ============ Hotspots → smooth-scroll to the matching section ============ */
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     document.querySelectorAll('.hotspot').forEach(h => {
       h.addEventListener('click', (e) => {
         e.preventDefault();
-        if (window.__heroSuppress) return; // ignore clicks that ended a drag
-        openChapter(h.dataset.chapter);
+        if (window.__heroSuppress) return; // ignore the click that ended a drag
+        const t = document.getElementById('ch-' + h.dataset.chapter);
+        if (t) t.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
       });
-    });
-    backdrop.addEventListener('click', closeChapter);
-    closeBtn.addEventListener('click', closeChapter);
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeChapter();
     });
 
     /* ============ Cursor magnetism on hotspots ============ */
@@ -1079,6 +1009,37 @@
 
       window.addEventListener('pointerdown', hideHint, { once: true });
       setTimeout(hideHint, 9000);
+    })();
+
+    /* ============ Scroll reveal + hero scroll cue + header scrim ============ */
+    (function pageScroll() {
+      document.documentElement.classList.add('js');
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const items = document.querySelectorAll('.ch-reveal');
+      if (!('IntersectionObserver' in window) || reduce) {
+        items.forEach(el => el.classList.add('in'));
+      } else {
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach(en => {
+            if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+          });
+        }, { rootMargin: '0px 0px -12% 0px', threshold: 0.12 });
+        items.forEach(el => io.observe(el));
+      }
+
+      const hint = document.getElementById('scrollHint');
+      const header = document.querySelector('header');
+      if (hint) hint.addEventListener('click', () => {
+        const first = document.getElementById('ch-welcome');
+        if (first) first.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+      });
+      function onScroll() {
+        const y = window.scrollY || window.pageYOffset || 0;
+        if (hint) hint.classList.toggle('is-hidden', y > 60);
+        if (header) header.classList.toggle('scrolled', y > 40);
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
     })();
 
     /* ============ Dust particles ============ */
